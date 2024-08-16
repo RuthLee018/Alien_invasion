@@ -7,7 +7,7 @@ from bullet import Bullet
 from alien import Alien
 from game_states import GameState
 from button import Button
-
+from scoreboard import ScoreBoard
 
 class AlienInvasion:
     def __init__(self):
@@ -25,8 +25,9 @@ class AlienInvasion:
         #self.settings.screen_height = self.screen.get_rect().height
         pygame.display.set_caption("Alien Invasion")
 
-        #创建用于存储游戏统计信息的实例
+        #创建用于存储游戏统计信息的实例,并创建计分牌
         self.states = GameState(self)
+        self.score_board = ScoreBoard(self)
 
         #创建Ship类实例
         self.ship = Ship(self)
@@ -62,7 +63,8 @@ class AlienInvasion:
     def _check_play_button(self,mouse_pos):
         button_clicked = self.play_button.rect.collidepoint(mouse_pos)
         if button_clicked and not self.active:
-            self.states.reset_stats()
+            self.states.reset_states()
+            self.score_board.prep_score()
             
             self.active = True
 
@@ -73,6 +75,8 @@ class AlienInvasion:
 
             #创建一个新的外星人舰队，将飞船放在屏幕底部中间（x,y轴）
             self.ship.center_ship()
+            #还原初始设置
+            self.settings.initialize_dynamic_settings()
     
 
     def _check_keydown_events(self,event):
@@ -89,6 +93,11 @@ class AlienInvasion:
             sys.exit()
         elif event.key == pygame.K_SPACE:
             self._fire_bullet()
+            """file = r"shot.mp3"
+            pygame.mixer.init()
+            pygame.mixer.music.load(file)
+            pygame.mixer.music.play()"""
+
 
 
 
@@ -128,14 +137,22 @@ class AlienInvasion:
         
 
     def _check_bullet_alien_collisions(self):
+        #检查是否有子弹击中外星人
         collision = pygame.sprite.groupcollide(self.bullets,self.aliens,True,True)
         file = r"collision.mp3"
         pygame.mixer.init()
         pygame.mixer.music.load(file)
         pygame.mixer.music.play()
+        if collision:
+            self.states.score += self.settings.alien_score 
+            self.score_board.prep_score()
+            self.score_board.check_high_score()
+
+        
         if not self.aliens:
             self.bullets.empty()
             self._create_fleet()
+            self.settings.increase_speed()
 
     def _update_bullets(self):
         self.bullets.update()
@@ -153,10 +170,13 @@ class AlienInvasion:
         self.ship.blitme()
         self.aliens.draw(self.screen)
 
+        #显示得分
+        self.score_board.show_score()
+
         if not self.active:
             self.play_button.draw_button()
 
-        pygame.display.flip()
+        pygame.display.flip()#让最近绘制的屏幕可见
 
    
 
